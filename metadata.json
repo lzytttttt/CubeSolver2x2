@@ -1,0 +1,6 @@
+{
+  "name": "二阶魔方解答器 (2x2 Cube Solver)",
+  "description": "简易二阶魔方3D解答器，支持自定义区块颜色、打乱、自动最优求解与3D旋转动画演示还原步骤。",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
