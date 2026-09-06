@@ -33,7 +33,19 @@ export type MoveName =
   | 'F' | "F'" | 'F2'
   | 'B' | "B'" | 'B2'
   | 'L' | "L'" | 'L2'
-  | 'R' | "R'" | 'R2';
+  | 'R' | "R'" | 'R2'
+  | 'Uw' | "Uw'" | 'Uw2'
+  | 'Dw' | "Dw'" | 'Dw2'
+  | 'Fw' | "Fw'" | 'Fw2'
+  | 'Bw' | "Bw'" | 'Bw2'
+  | 'Lw' | "Lw'" | 'Lw2'
+  | 'Rw' | "Rw'" | 'Rw2'
+  | '2U' | "2U'" | '2U2'
+  | '2D' | "2D'" | '2D2'
+  | '2F' | "2F'" | '2F2'
+  | '2B' | "2B'" | '2B2'
+  | '2L' | "2L'" | '2L2'
+  | '2R' | "2R'" | '2R2';
 
 export interface MoveInfo {
   move: MoveName;
@@ -49,17 +61,15 @@ export interface SolutionStep {
   move: MoveName;
   description: string;
   notation: string;
+  phase?: string;
 }
 
-// 24 facelets: 6 faces * 4 stickers
-// Indexing:
-// U: 0, 1, 2, 3
-// D: 4, 5, 6, 7
-// F: 8, 9, 10, 11
-// B: 12, 13, 14, 15
-// L: 16, 17, 18, 19
-// R: 20, 21, 22, 23
-export type FaceletColors = Record<FaceName, [CubeColor, CubeColor, CubeColor, CubeColor]>;
+export type CubeType = '2x2' | '3x3' | '4x4';
+
+// Facelet colors for each of the 6 faces.
+// For 2x2: array length 4
+// For 3x3: array length 9
+export type FaceletColors = Record<FaceName, CubeColor[]>;
 
 // Physical corner piece state
 export interface CornerPieceState {

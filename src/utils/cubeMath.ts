@@ -369,7 +369,7 @@ export function applyMoveToFacelets(facelets: FaceletColors, move: MoveName): Fa
 // Inverse of a move
 export function getInverseMove(move: MoveName): MoveName {
   if (move.endsWith('2')) return move;
-  if (move.endsWith("'")) return move.slice(0, 1) as MoveName;
+  if (move.endsWith("'")) return move.slice(0, -1) as MoveName;
   return `${move}'` as MoveName;
 }
 
@@ -393,4 +393,42 @@ export const MOVE_DESCRIPTIONS: Record<MoveName, string> = {
   R: '右层顺时针旋转 90°',
   "R'": '右层逆时针旋转 90°',
   R2: '右层旋转 180°',
+  // 4x4 Wide moves
+  Uw: '顶层及内层双层顺时针旋转 90°',
+  "Uw'": '顶层及内层双层逆时针旋转 90°',
+  Uw2: '顶层及内层双层旋转 180°',
+  Dw: '底层及内层双层顺时针旋转 90°',
+  "Dw'": '底层及内层双层逆时针旋转 90°',
+  Dw2: '底层及内层双层旋转 180°',
+  Fw: '前侧双层顺时针旋转 90°',
+  "Fw'": '前侧双层逆时针旋转 90°',
+  Fw2: '前侧双层旋转 180°',
+  Bw: '后侧双层顺时针旋转 90°',
+  "Bw'": '后侧双层逆时针旋转 90°',
+  Bw2: '后侧双层旋转 180°',
+  Lw: '左侧双层顺时针旋转 90°',
+  "Lw'": '左侧双层逆时针旋转 90°',
+  Lw2: '左侧双层旋转 180°',
+  Rw: '右侧双层顺时针旋转 90°',
+  "Rw'": '右侧双层逆时针旋转 90°',
+  Rw2: '右侧双层旋转 180°',
+  // 4x4 Inner slice moves
+  '2U': '顶面内切层顺时针旋转 90°',
+  "2U'": '顶面内切层逆时针旋转 90°',
+  '2U2': '顶面内切层旋转 180°',
+  '2D': '底面内切层顺时针旋转 90°',
+  "2D'": '底面内切层逆时针旋转 90°',
+  '2D2': '底面内切层旋转 180°',
+  '2F': '前面内切层顺时针旋转 90°',
+  "2F'": '前面内切层逆时针旋转 90°',
+  '2F2': '前面内切层旋转 180°',
+  '2B': '后面内切层顺时针旋转 90°',
+  "2B'": '后面内切层逆时针旋转 90°',
+  '2B2': '后面内切层旋转 180°',
+  '2L': '左面内切层顺时针旋转 90°',
+  "2L'": '左面内切层逆时针旋转 90°',
+  '2L2': '左面内切层旋转 180°',
+  '2R': '右面内切层顺时针旋转 90°',
+  "2R'": '右面内切层逆时针旋转 90°',
+  '2R2': '右面内切层旋转 180°',
 };

@@ -1,8 +1,9 @@
-import React from 'react';
-import { FaceName, MoveName } from '../types/cube';
+import React, { useState } from 'react';
+import { CubeType, FaceName, MoveName } from '../types/cube';
 import { Play, Sparkles, RotateCw, History } from 'lucide-react';
 
 interface ManualControlsProps {
+  cubeType?: CubeType;
   onApplyMove: (move: MoveName) => void;
   onAutoSolve: () => void;
   onRandomScramble: () => void;
@@ -30,7 +31,26 @@ const MOVE_GROUPS: FaceMoveGroup[] = [
   { face: 'R', name: '右层 R', colorDot: 'bg-rose-600', moves: ['R', "R'", 'R2'] },
 ];
 
+const WIDE_MOVE_GROUPS: FaceMoveGroup[] = [
+  { face: 'U', name: '顶双层 Uw', colorDot: 'bg-white', moves: ['Uw', "Uw'", 'Uw2'] },
+  { face: 'D', name: '底双层 Dw', colorDot: 'bg-amber-400', moves: ['Dw', "Dw'", 'Dw2'] },
+  { face: 'F', name: '前双层 Fw', colorDot: 'bg-emerald-500', moves: ['Fw', "Fw'", 'Fw2'] },
+  { face: 'B', name: '后双层 Bw', colorDot: 'bg-blue-600', moves: ['Bw', "Bw'", 'Bw2'] },
+  { face: 'L', name: '左双层 Lw', colorDot: 'bg-orange-500', moves: ['Lw', "Lw'", 'Lw2'] },
+  { face: 'R', name: '右双层 Rw', colorDot: 'bg-rose-600', moves: ['Rw', "Rw'", 'Rw2'] },
+];
+
+const SLICE_MOVE_GROUPS: FaceMoveGroup[] = [
+  { face: 'U', name: '顶内切 2U', colorDot: 'bg-white', moves: ['2U', "2U'", '2U2'] },
+  { face: 'D', name: '底内切 2D', colorDot: 'bg-amber-400', moves: ['2D', "2D'", '2D2'] },
+  { face: 'F', name: '前内切 2F', colorDot: 'bg-emerald-500', moves: ['2F', "2F'", '2F2'] },
+  { face: 'B', name: '后内切 2B', colorDot: 'bg-blue-600', moves: ['2B', "2B'", '2B2'] },
+  { face: 'L', name: '左内切 2L', colorDot: 'bg-orange-500', moves: ['2L', "2L'", '2L2'] },
+  { face: 'R', name: '右内切 2R', colorDot: 'bg-rose-600', moves: ['2R', "2R'", '2R2'] },
+];
+
 export const ManualControls: React.FC<ManualControlsProps> = ({
+  cubeType = '2x2',
   onApplyMove,
   onAutoSolve,
   onRandomScramble,
@@ -41,6 +61,16 @@ export const ManualControls: React.FC<ManualControlsProps> = ({
   recentMoves,
   onClearHistory,
 }) => {
+  const [moveSubCategory, setMoveSubCategory] = useState<'outer' | 'wide' | 'slice'>('outer');
+
+  const activeGroups =
+    cubeType === '4x4'
+      ? moveSubCategory === 'wide'
+        ? WIDE_MOVE_GROUPS
+        : moveSubCategory === 'slice'
+        ? SLICE_MOVE_GROUPS
+        : MOVE_GROUPS
+      : MOVE_GROUPS;
   return (
     <div className="flex flex-col gap-4 p-4 rounded-xl bg-slate-900/80 border border-slate-800 shadow-sm backdrop-blur">
       {/* Primary Action Button: Auto Solve */}
@@ -85,8 +115,43 @@ export const ManualControls: React.FC<ManualControlsProps> = ({
           <span className="text-[11px] font-normal text-slate-500">点击即转</span>
         </div>
 
+        {cubeType === '4x4' && (
+          <div className="flex items-center gap-1.5 p-1 rounded-xl bg-slate-950 border border-slate-800 mb-2.5">
+            <button
+              onClick={() => setMoveSubCategory('outer')}
+              className={`flex-1 py-1 px-2 rounded-lg text-xs font-medium transition-all ${
+                moveSubCategory === 'outer'
+                  ? 'bg-indigo-600 text-white shadow-sm'
+                  : 'text-slate-400 hover:text-slate-200 hover:bg-slate-900'
+              }`}
+            >
+              外层单转 (U/D/F/B/L/R)
+            </button>
+            <button
+              onClick={() => setMoveSubCategory('wide')}
+              className={`flex-1 py-1 px-2 rounded-lg text-xs font-medium transition-all ${
+                moveSubCategory === 'wide'
+                  ? 'bg-indigo-600 text-white shadow-sm'
+                  : 'text-slate-400 hover:text-slate-200 hover:bg-slate-900'
+              }`}
+            >
+              宽层双转 (Uw/Dw...)
+            </button>
+            <button
+              onClick={() => setMoveSubCategory('slice')}
+              className={`flex-1 py-1 px-2 rounded-lg text-xs font-medium transition-all ${
+                moveSubCategory === 'slice'
+                  ? 'bg-indigo-600 text-white shadow-sm'
+                  : 'text-slate-400 hover:text-slate-200 hover:bg-slate-900'
+              }`}
+            >
+              内切层单转 (2U/2D...)
+            </button>
+          </div>
+        )}
+
         <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
-          {MOVE_GROUPS.map((group) => (
+          {activeGroups.map((group) => (
             <div
               key={group.face}
               className="p-2 rounded-xl bg-slate-950/60 border border-slate-800/90 flex flex-col gap-1.5"

@@ -1,8 +1,9 @@
 import React from 'react';
-import { CubeColor, COLOR_PALETTE } from '../types/cube';
+import { CubeColor, CubeType, COLOR_PALETTE } from '../types/cube';
 import { CheckCircle2, AlertCircle, Sparkles, RefreshCw } from 'lucide-react';
 
 interface ColorPaletteProps {
+  cubeType: CubeType;
   activeColor: CubeColor;
   onSelectColor: (color: CubeColor) => void;
   colorCounts?: Record<CubeColor, number>;
@@ -14,6 +15,7 @@ interface ColorPaletteProps {
 }
 
 export const ColorPalette: React.FC<ColorPaletteProps> = ({
+  cubeType,
   activeColor,
   onSelectColor,
   colorCounts = { white: 4, yellow: 4, green: 4, blue: 4, orange: 4, red: 4 },
@@ -23,6 +25,8 @@ export const ColorPalette: React.FC<ColorPaletteProps> = ({
   onResetSolved,
   onRandomScramble,
 }) => {
+  const targetCount = cubeType === '4x4' ? 16 : cubeType === '3x3' ? 9 : 4;
+
   return (
     <div className="flex flex-col gap-3 p-4 rounded-xl bg-slate-900/80 border border-slate-800 shadow-sm backdrop-blur">
       <div className="flex items-center justify-between">
@@ -56,7 +60,7 @@ export const ColorPalette: React.FC<ColorPaletteProps> = ({
         {COLOR_PALETTE.map(({ color, hex, name }) => {
           const count = colorCounts[color] ?? 0;
           const isSelected = activeColor === color;
-          const isCountCorrect = count === 4;
+          const isCountCorrect = count === targetCount;
 
           return (
             <button
@@ -85,12 +89,12 @@ export const ColorPalette: React.FC<ColorPaletteProps> = ({
                   className={`text-[11px] font-mono font-semibold px-1.5 py-0.5 rounded ${
                     isCountCorrect
                       ? 'bg-emerald-950/70 text-emerald-400 border border-emerald-900/60'
-                      : count > 4
+                      : count > targetCount
                       ? 'bg-rose-950/70 text-rose-400 border border-rose-900/60'
                       : 'bg-amber-950/70 text-amber-400 border border-amber-900/60'
                   }`}
                 >
-                  {count} / 4
+                  {count} / {targetCount}
                 </span>
                 {isSelected && (
                   <span className="text-[10px] text-indigo-400 font-medium">选中</span>

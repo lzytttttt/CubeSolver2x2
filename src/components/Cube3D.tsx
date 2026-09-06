@@ -1,9 +1,10 @@
 import React, { useEffect, useRef } from 'react';
 import * as THREE from 'three';
 import { OrbitControls } from 'three/examples/jsm/controls/OrbitControls.js';
-import { CubeColor, FaceletColors, FaceName, MoveName } from '../types/cube';
+import { CubeColor, CubeType, FaceletColors, FaceName, MoveName } from '../types/cube';
 
 interface Cube3DProps {
+  cubeType: CubeType;
   facelets: FaceletColors;
   onStickerClick?: (face: FaceName, index: number) => void;
   animatingMove: MoveName | null;
@@ -35,12 +36,12 @@ interface CubieData {
 }
 
 export const Cube3D: React.FC<Cube3DProps> = ({
+  cubeType,
   facelets,
   onStickerClick,
   animatingMove,
   onAnimationEnd,
   speed,
-  highlightFace,
 }) => {
   const containerRef = useRef<HTMLDivElement>(null);
   const rendererRef = useRef<THREE.WebGLRenderer | null>(null);
@@ -64,10 +65,12 @@ export const Cube3D: React.FC<Cube3DProps> = ({
     const f = faceletsRef.current;
     cubiesRef.current.forEach((cubie) => {
       cubie.stickers.forEach(({ mesh, face, index }) => {
-        const colorName = f[face][index];
-        const hex = COLOR_MAP[colorName] || 0xffffff;
-        const mat = mesh.material as THREE.MeshStandardMaterial;
-        mat.color.setHex(hex);
+        const colorName = f[face]?.[index];
+        if (colorName) {
+          const hex = COLOR_MAP[colorName] || 0xffffff;
+          const mat = mesh.material as THREE.MeshStandardMaterial;
+          mat.color.setHex(hex);
+        }
       });
     });
   };
@@ -86,7 +89,13 @@ export const Cube3D: React.FC<Cube3DProps> = ({
 
     // Camera
     const camera = new THREE.PerspectiveCamera(40, width / height, 0.1, 100);
-    camera.position.set(4.2, 3.8, 4.8);
+    const camPos =
+      cubeType === '4x4'
+        ? new THREE.Vector3(6.8, 5.6, 7.8)
+        : cubeType === '3x3'
+        ? new THREE.Vector3(5.6, 4.8, 6.2)
+        : new THREE.Vector3(4.2, 3.8, 4.8);
+    camera.position.copy(camPos);
     cameraRef.current = camera;
 
     // Renderer
@@ -103,8 +112,8 @@ export const Cube3D: React.FC<Cube3DProps> = ({
     const controls = new OrbitControls(camera, renderer.domElement);
     controls.enableDamping = true;
     controls.dampingFactor = 0.08;
-    controls.minDistance = 3.2;
-    controls.maxDistance = 10;
+    controls.minDistance = cubeType === '4x4' ? 4.5 : cubeType === '3x3' ? 3.8 : 3.0;
+    controls.maxDistance = 14;
     controls.rotateSpeed = 0.8;
     controlsRef.current = controls;
 
@@ -120,17 +129,27 @@ export const Cube3D: React.FC<Cube3DProps> = ({
     dirLight2.position.set(-5, -3, -5);
     scene.add(dirLight2);
 
-    // Build the 8 cubies
+    // Build cubies
     const cubies: CubieData[] = [];
     const cubieSize = 0.94;
     const stickerOffset = cubieSize / 2 + 0.005;
     const stickerSize = 0.84;
 
-    const coords = [-0.5, 0.5];
+    const coords =
+      cubeType === '4x4'
+        ? [-1.5, -0.5, 0.5, 1.5]
+        : cubeType === '3x3'
+        ? [-1, 0, 1]
+        : [-0.5, 0.5];
 
     coords.forEach((x) => {
       coords.forEach((y) => {
         coords.forEach((z) => {
+          // In 3x3, skip hidden center core cubie at (0, 0, 0)
+          if (cubeType === '3x3' && x === 0 && y === 0 && z === 0) return;
+          // In 4x4, skip the 8 inner hidden core cubies
+          if (cubeType === '4x4' && Math.abs(x) < 1 && Math.abs(y) < 1 && Math.abs(z) < 1) return;
+
           const group = new THREE.Group();
           group.position.set(x, y, z);
 
@@ -156,9 +175,9 @@ export const Cube3D: React.FC<Cube3DProps> = ({
             rot: THREE.Euler,
           ) => {
             const stickerGeo = new THREE.PlaneGeometry(stickerSize, stickerSize);
-            const colorName = faceletsRef.current[face][index];
+            const colorName = faceletsRef.current[face]?.[index] || 'white';
             const mat = new THREE.MeshStandardMaterial({
-              color: COLOR_MAP[colorName],
+              color: COLOR_MAP[colorName] || 0xffffff,
               roughness: 0.25,
               metalness: 0.05,
               polygonOffset: true,
@@ -173,91 +192,137 @@ export const Cube3D: React.FC<Cube3DProps> = ({
             stickers.push({ mesh, face, index });
           };
 
-          // Up / Down
-          if (y > 0) {
-            // Face U
-            let idx = 0;
-            if (x < 0 && z < 0) idx = 0; // UBL
-            else if (x > 0 && z < 0) idx = 1; // UBR
-            else if (x < 0 && z > 0) idx = 2; // UFL
-            else if (x > 0 && z > 0) idx = 3; // UFR
-            addSticker(
-              'U',
-              idx,
-              new THREE.Vector3(0, stickerOffset, 0),
-              new THREE.Euler(-Math.PI / 2, 0, 0),
-            );
-          } else {
-            // Face D
-            let idx = 0;
-            if (x < 0 && z > 0) idx = 0; // DFL
-            else if (x > 0 && z > 0) idx = 1; // DFR
-            else if (x < 0 && z < 0) idx = 2; // DBL
-            else if (x > 0 && z < 0) idx = 3; // DBR
-            addSticker(
-              'D',
-              idx,
-              new THREE.Vector3(0, -stickerOffset, 0),
-              new THREE.Euler(Math.PI / 2, 0, 0),
-            );
-          }
+          if (cubeType === '2x2') {
+            // Up / Down
+            if (y > 0) {
+              let idx = 0;
+              if (x < 0 && z < 0) idx = 0; // UBL
+              else if (x > 0 && z < 0) idx = 1; // UBR
+              else if (x < 0 && z > 0) idx = 2; // UFL
+              else if (x > 0 && z > 0) idx = 3; // UFR
+              addSticker('U', idx, new THREE.Vector3(0, stickerOffset, 0), new THREE.Euler(-Math.PI / 2, 0, 0));
+            } else {
+              let idx = 0;
+              if (x < 0 && z > 0) idx = 0; // DFL
+              else if (x > 0 && z > 0) idx = 1; // DFR
+              else if (x < 0 && z < 0) idx = 2; // DBL
+              else if (x > 0 && z < 0) idx = 3; // DBR
+              addSticker('D', idx, new THREE.Vector3(0, -stickerOffset, 0), new THREE.Euler(Math.PI / 2, 0, 0));
+            }
 
-          // Front / Back
-          if (z > 0) {
-            // Face F
-            let idx = 0;
-            if (x < 0 && y > 0) idx = 0; // UFL
-            else if (x > 0 && y > 0) idx = 1; // UFR
-            else if (x < 0 && y < 0) idx = 2; // DFL
-            else if (x > 0 && y < 0) idx = 3; // DFR
-            addSticker(
-              'F',
-              idx,
-              new THREE.Vector3(0, 0, stickerOffset),
-              new THREE.Euler(0, 0, 0),
-            );
-          } else {
-            // Face B
-            let idx = 0;
-            if (x > 0 && y > 0) idx = 0; // UBR
-            else if (x < 0 && y > 0) idx = 1; // UBL
-            else if (x > 0 && y < 0) idx = 2; // DBR
-            else if (x < 0 && y < 0) idx = 3; // DBL
-            addSticker(
-              'B',
-              idx,
-              new THREE.Vector3(0, 0, -stickerOffset),
-              new THREE.Euler(0, Math.PI, 0),
-            );
-          }
+            // Front / Back
+            if (z > 0) {
+              let idx = 0;
+              if (x < 0 && y > 0) idx = 0; // UFL
+              else if (x > 0 && y > 0) idx = 1; // UFR
+              else if (x < 0 && y < 0) idx = 2; // DFL
+              else if (x > 0 && y < 0) idx = 3; // DFR
+              addSticker('F', idx, new THREE.Vector3(0, 0, stickerOffset), new THREE.Euler(0, 0, 0));
+            } else {
+              let idx = 0;
+              if (x > 0 && y > 0) idx = 0; // UBR
+              else if (x < 0 && y > 0) idx = 1; // UBL
+              else if (x > 0 && y < 0) idx = 2; // DBR
+              else if (x < 0 && y < 0) idx = 3; // DBL
+              addSticker('B', idx, new THREE.Vector3(0, 0, -stickerOffset), new THREE.Euler(0, Math.PI, 0));
+            }
 
-          // Left / Right
-          if (x < 0) {
-            // Face L
-            let idx = 0;
-            if (z < 0 && y > 0) idx = 0; // UBL
-            else if (z > 0 && y > 0) idx = 1; // UFL
-            else if (z < 0 && y < 0) idx = 2; // DBL
-            else if (z > 0 && y < 0) idx = 3; // DFL
-            addSticker(
-              'L',
-              idx,
-              new THREE.Vector3(-stickerOffset, 0, 0),
-              new THREE.Euler(0, -Math.PI / 2, 0),
-            );
+            // Left / Right
+            if (x < 0) {
+              let idx = 0;
+              if (z < 0 && y > 0) idx = 0; // UBL
+              else if (z > 0 && y > 0) idx = 1; // UFL
+              else if (z < 0 && y < 0) idx = 2; // DBL
+              else if (z > 0 && y < 0) idx = 3; // DFL
+              addSticker('L', idx, new THREE.Vector3(-stickerOffset, 0, 0), new THREE.Euler(0, -Math.PI / 2, 0));
+            } else {
+              let idx = 0;
+              if (z > 0 && y > 0) idx = 0; // UFR
+              else if (z < 0 && y > 0) idx = 1; // UBR
+              else if (z > 0 && y < 0) idx = 2; // DFR
+              else if (z < 0 && y < 0) idx = 3; // DBR
+              addSticker('R', idx, new THREE.Vector3(stickerOffset, 0, 0), new THREE.Euler(0, Math.PI / 2, 0));
+            }
+          } else if (cubeType === '3x3') {
+            // 3x3 cube sticker indexing
+            // Up / Down
+            if (y === 1) {
+              const row = z === -1 ? 0 : z === 0 ? 1 : 2;
+              const col = x === -1 ? 0 : x === 0 ? 1 : 2;
+              const idx = row * 3 + col;
+              addSticker('U', idx, new THREE.Vector3(0, stickerOffset, 0), new THREE.Euler(-Math.PI / 2, 0, 0));
+            } else if (y === -1) {
+              const row = z === 1 ? 0 : z === 0 ? 1 : 2;
+              const col = x === -1 ? 0 : x === 0 ? 1 : 2;
+              const idx = row * 3 + col;
+              addSticker('D', idx, new THREE.Vector3(0, -stickerOffset, 0), new THREE.Euler(Math.PI / 2, 0, 0));
+            }
+
+            // Front / Back
+            if (z === 1) {
+              const row = y === 1 ? 0 : y === 0 ? 1 : 2;
+              const col = x === -1 ? 0 : x === 0 ? 1 : 2;
+              const idx = row * 3 + col;
+              addSticker('F', idx, new THREE.Vector3(0, 0, stickerOffset), new THREE.Euler(0, 0, 0));
+            } else if (z === -1) {
+              const row = y === 1 ? 0 : y === 0 ? 1 : 2;
+              const col = x === 1 ? 0 : x === 0 ? 1 : 2;
+              const idx = row * 3 + col;
+              addSticker('B', idx, new THREE.Vector3(0, 0, -stickerOffset), new THREE.Euler(0, Math.PI, 0));
+            }
+
+            // Left / Right
+            if (x === -1) {
+              const row = y === 1 ? 0 : y === 0 ? 1 : 2;
+              const col = z === -1 ? 0 : z === 0 ? 1 : 2;
+              const idx = row * 3 + col;
+              addSticker('L', idx, new THREE.Vector3(-stickerOffset, 0, 0), new THREE.Euler(0, -Math.PI / 2, 0));
+            } else if (x === 1) {
+              const row = y === 1 ? 0 : y === 0 ? 1 : 2;
+              const col = z === 1 ? 0 : z === 0 ? 1 : 2;
+              const idx = row * 3 + col;
+              addSticker('R', idx, new THREE.Vector3(stickerOffset, 0, 0), new THREE.Euler(0, Math.PI / 2, 0));
+            }
           } else {
-            // Face R
-            let idx = 0;
-            if (z > 0 && y > 0) idx = 0; // UFR
-            else if (z < 0 && y > 0) idx = 1; // UBR
-            else if (z > 0 && y < 0) idx = 2; // DFR
-            else if (z < 0 && y < 0) idx = 3; // DBR
-            addSticker(
-              'R',
-              idx,
-              new THREE.Vector3(stickerOffset, 0, 0),
-              new THREE.Euler(0, Math.PI / 2, 0),
-            );
+            // 4x4 cube sticker indexing
+            // Up / Down
+            if (y === 1.5) {
+              const row = z === -1.5 ? 0 : z === -0.5 ? 1 : z === 0.5 ? 2 : 3;
+              const col = x === -1.5 ? 0 : x === -0.5 ? 1 : x === 0.5 ? 2 : 3;
+              const idx = row * 4 + col;
+              addSticker('U', idx, new THREE.Vector3(0, stickerOffset, 0), new THREE.Euler(-Math.PI / 2, 0, 0));
+            } else if (y === -1.5) {
+              const row = z === 1.5 ? 0 : z === 0.5 ? 1 : z === -0.5 ? 2 : 3;
+              const col = x === -1.5 ? 0 : x === -0.5 ? 1 : x === 0.5 ? 2 : 3;
+              const idx = row * 4 + col;
+              addSticker('D', idx, new THREE.Vector3(0, -stickerOffset, 0), new THREE.Euler(Math.PI / 2, 0, 0));
+            }
+
+            // Front / Back
+            if (z === 1.5) {
+              const row = y === 1.5 ? 0 : y === 0.5 ? 1 : y === -0.5 ? 2 : 3;
+              const col = x === -1.5 ? 0 : x === -0.5 ? 1 : x === 0.5 ? 2 : 3;
+              const idx = row * 4 + col;
+              addSticker('F', idx, new THREE.Vector3(0, 0, stickerOffset), new THREE.Euler(0, 0, 0));
+            } else if (z === -1.5) {
+              const row = y === 1.5 ? 0 : y === 0.5 ? 1 : y === -0.5 ? 2 : 3;
+              const col = x === 1.5 ? 0 : x === 0.5 ? 1 : x === -0.5 ? 2 : 3;
+              const idx = row * 4 + col;
+              addSticker('B', idx, new THREE.Vector3(0, 0, -stickerOffset), new THREE.Euler(0, Math.PI, 0));
+            }
+
+            // Left / Right
+            if (x === -1.5) {
+              const row = y === 1.5 ? 0 : y === 0.5 ? 1 : y === -0.5 ? 2 : 3;
+              const col = z === -1.5 ? 0 : z === -0.5 ? 1 : z === 0.5 ? 2 : 3;
+              const idx = row * 4 + col;
+              addSticker('L', idx, new THREE.Vector3(-stickerOffset, 0, 0), new THREE.Euler(0, -Math.PI / 2, 0));
+            } else if (x === 1.5) {
+              const row = y === 1.5 ? 0 : y === 0.5 ? 1 : y === -0.5 ? 2 : 3;
+              const col = z === 1.5 ? 0 : z === 0.5 ? 1 : z === -0.5 ? 2 : 3;
+              const idx = row * 4 + col;
+              addSticker('R', idx, new THREE.Vector3(stickerOffset, 0, 0), new THREE.Euler(0, Math.PI / 2, 0));
+            }
           }
 
           scene.add(group);
@@ -303,7 +368,7 @@ export const Cube3D: React.FC<Cube3DProps> = ({
         container.removeChild(renderer.domElement);
       }
     };
-  }, []);
+  }, [cubeType]);
 
   // Handle click to color
   const handleClick = (e: React.MouseEvent<HTMLDivElement>) => {
@@ -333,49 +398,90 @@ export const Cube3D: React.FC<Cube3DProps> = ({
     const scene = sceneRef.current;
     isAnimatingRef.current = true;
 
-    const face = animatingMove[0] as FaceName;
     const isPrime = animatingMove.includes("'");
     const isDouble = animatingMove.includes('2');
+    const base = animatingMove.replace(/['2]/g, '');
 
     // Determine axis and angle
     let axis = new THREE.Vector3(0, 1, 0);
     let totalAngle = -Math.PI / 2; // standard CW for U
     let layerFilter: (pos: THREE.Vector3) => boolean = () => true;
 
-    switch (face) {
-      case 'U':
-        axis = new THREE.Vector3(0, 1, 0);
-        totalAngle = isDouble ? -Math.PI : isPrime ? Math.PI / 2 : -Math.PI / 2;
+    if (base.includes('U')) {
+      axis = new THREE.Vector3(0, 1, 0);
+      totalAngle = isDouble ? -Math.PI : isPrime ? Math.PI / 2 : -Math.PI / 2;
+      if (cubeType === '4x4') {
+        if (base === 'Uw') layerFilter = (p) => p.y > 0.0;
+        else if (base === '2U') layerFilter = (p) => p.y > 0.0 && p.y < 1.0;
+        else layerFilter = (p) => p.y > 1.0;
+      } else if (cubeType === '3x3') {
+        layerFilter = (p) => p.y > 0.5;
+      } else {
         layerFilter = (p) => p.y > 0.1;
-        break;
-      case 'D':
-        axis = new THREE.Vector3(0, 1, 0);
-        totalAngle = isDouble ? Math.PI : isPrime ? -Math.PI / 2 : Math.PI / 2;
+      }
+    } else if (base.includes('D')) {
+      axis = new THREE.Vector3(0, 1, 0);
+      totalAngle = isDouble ? Math.PI : isPrime ? -Math.PI / 2 : Math.PI / 2;
+      if (cubeType === '4x4') {
+        if (base === 'Dw') layerFilter = (p) => p.y < 0.0;
+        else if (base === '2D') layerFilter = (p) => p.y < 0.0 && p.y > -1.0;
+        else layerFilter = (p) => p.y < -1.0;
+      } else if (cubeType === '3x3') {
+        layerFilter = (p) => p.y < -0.5;
+      } else {
         layerFilter = (p) => p.y < -0.1;
-        break;
-      case 'R':
-        axis = new THREE.Vector3(1, 0, 0);
-        totalAngle = isDouble ? -Math.PI : isPrime ? Math.PI / 2 : -Math.PI / 2;
+      }
+    } else if (base.includes('R')) {
+      axis = new THREE.Vector3(1, 0, 0);
+      totalAngle = isDouble ? -Math.PI : isPrime ? Math.PI / 2 : -Math.PI / 2;
+      if (cubeType === '4x4') {
+        if (base === 'Rw') layerFilter = (p) => p.x > 0.0;
+        else if (base === '2R') layerFilter = (p) => p.x > 0.0 && p.x < 1.0;
+        else layerFilter = (p) => p.x > 1.0;
+      } else if (cubeType === '3x3') {
+        layerFilter = (p) => p.x > 0.5;
+      } else {
         layerFilter = (p) => p.x > 0.1;
-        break;
-      case 'L':
-        axis = new THREE.Vector3(1, 0, 0);
-        totalAngle = isDouble ? Math.PI : isPrime ? -Math.PI / 2 : Math.PI / 2;
+      }
+    } else if (base.includes('L')) {
+      axis = new THREE.Vector3(1, 0, 0);
+      totalAngle = isDouble ? Math.PI : isPrime ? -Math.PI / 2 : Math.PI / 2;
+      if (cubeType === '4x4') {
+        if (base === 'Lw') layerFilter = (p) => p.x < 0.0;
+        else if (base === '2L') layerFilter = (p) => p.x < 0.0 && p.x > -1.0;
+        else layerFilter = (p) => p.x < -1.0;
+      } else if (cubeType === '3x3') {
+        layerFilter = (p) => p.x < -0.5;
+      } else {
         layerFilter = (p) => p.x < -0.1;
-        break;
-      case 'F':
-        axis = new THREE.Vector3(0, 0, 1);
-        totalAngle = isDouble ? -Math.PI : isPrime ? Math.PI / 2 : -Math.PI / 2;
+      }
+    } else if (base.includes('F')) {
+      axis = new THREE.Vector3(0, 0, 1);
+      totalAngle = isDouble ? -Math.PI : isPrime ? Math.PI / 2 : -Math.PI / 2;
+      if (cubeType === '4x4') {
+        if (base === 'Fw') layerFilter = (p) => p.z > 0.0;
+        else if (base === '2F') layerFilter = (p) => p.z > 0.0 && p.z < 1.0;
+        else layerFilter = (p) => p.z > 1.0;
+      } else if (cubeType === '3x3') {
+        layerFilter = (p) => p.z > 0.5;
+      } else {
         layerFilter = (p) => p.z > 0.1;
-        break;
-      case 'B':
-        axis = new THREE.Vector3(0, 0, 1);
-        totalAngle = isDouble ? Math.PI : isPrime ? -Math.PI / 2 : Math.PI / 2;
+      }
+    } else if (base.includes('B')) {
+      axis = new THREE.Vector3(0, 0, 1);
+      totalAngle = isDouble ? Math.PI : isPrime ? -Math.PI / 2 : Math.PI / 2;
+      if (cubeType === '4x4') {
+        if (base === 'Bw') layerFilter = (p) => p.z < 0.0;
+        else if (base === '2B') layerFilter = (p) => p.z < 0.0 && p.z > -1.0;
+        else layerFilter = (p) => p.z < -1.0;
+      } else if (cubeType === '3x3') {
+        layerFilter = (p) => p.z < -0.5;
+      } else {
         layerFilter = (p) => p.z < -0.1;
-        break;
+      }
     }
 
-    // Find the 4 cubies on that layer
+    // Find the cubies on that layer
     const activeCubies = cubiesRef.current.filter((c) => layerFilter(c.initialPos));
 
     // Create pivot
@@ -427,7 +533,8 @@ export const Cube3D: React.FC<Cube3DProps> = ({
   // Reset camera view preset
   const resetCamera = () => {
     if (!cameraRef.current || !controlsRef.current) return;
-    cameraRef.current.position.set(4.2, 3.8, 4.8);
+    const camPos = cubeType === '3x3' ? new THREE.Vector3(5.6, 4.8, 6.2) : new THREE.Vector3(4.2, 3.8, 4.8);
+    cameraRef.current.position.copy(camPos);
     controlsRef.current.target.set(0, 0, 0);
     controlsRef.current.update();
   };
